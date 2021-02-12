@@ -448,7 +448,7 @@ function menu.addPattern(patterns)
 
         if imgui.Button("Add", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
             statusMessage = "Added "..vars.patternName
-            data.Save(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
+            data.Save(vars.patternName, vars.startOffset .. ";" .. vars.endOffset .. ";/")
 
         end
 
@@ -466,6 +466,7 @@ function menu.pattern(pattern)
         local vars = {
             startOffset = tonumber(pattern.startOffset),
             endOffset = tonumber(pattern.endOffset),
+            newOffset = 0,
             patternName = pattern.name
         }
         util.retrieveStateVariables(menuID, vars)
@@ -480,13 +481,52 @@ function menu.pattern(pattern)
         gui.InputOffset(vars, "End", "endOffset", "Copied end offset", "Sets the end of the pattern at the current position")
 
         if imgui.Button("Apply", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            pattern.startOffset = vars.startOffset
+            pattern.endOffset = vars.endOffset
+            patternutils.savePattern(pattern)
             statusMessage = "Edited "..vars.patternName
-            data.Save(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
         end
 
         if imgui.Button("Delete", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
             statusMessage = "Deleted "..vars.patternName
             data.Delete(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
+        end
+
+        imgui.Separator()
+
+        imgui.Text("Occurences")
+        
+        gui.InputOffset(vars, "New", "newOffset", "Copied new offset", "Adds a new occurence for this pattern")
+
+        if imgui.Button("Add", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            table.insert(pattern.occurences, vars.newOffset)
+            patternutils.savePattern(pattern)
+            statusMessage = "Added ".. vars.newOffset .." to "..vars.patternName
+        end
+
+        local c = 0
+        for _,v in pairs(pattern.occurences) do
+            c = c + 1
+            if v != nil and v != '' then
+                if imgui.Button(v, {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+                    actions.GoToObjects(v)
+                end
+                gui.sameLine()
+                if imgui.Button("Delete            "..v.."|"..c, {widths[1] * 0.75, style.DEFAULT_WIDGET_HEIGHT}) then
+                    local new_occ = {}
+                    for _,test in pairs(pattern.occurences) do
+                        if test != nil and test != '' then
+                            if(v != test) then 
+                                table.insert(new_occ, test) 
+                            else
+                                statusMessage = statusMessage .. " | removed " .. test .. " | "
+                            end
+                        end
+                    end
+                    pattern.occurences = new_occ
+                    patternutils.savePattern(pattern)
+                end
+            end
         end
 
         util.saveStateVariables(menuID, vars)
@@ -509,14 +549,31 @@ function patternutils.loadPatterns()
 end
 
 function patternutils.loadPattern(name)
-    local pattern = {}
-    local values = util.strsplit(data.Load(name),";")
+    local pattern = {
+        occurences = {}
+    }
+    local values = util.strsplit(data.Load(name), ";")
 
     pattern.name = name
     pattern.startOffset = values[1]
     pattern.endOffset = values[2]
 
+    if values[3] then
+        pattern.occurences = util.strsplit(values[3], "/")
+    end
     return pattern
+end
+
+function patternutils.savePattern(pattern)
+    local str = pattern.startOffset .. ";" .. pattern.endOffset .. ";/"
+
+    for _,v in pairs(pattern.occurences) do
+        if v != nil and v != '' then
+            str = str .. v .."/"
+        end
+    end
+
+    data.Save(pattern.name, str)
 end
 
 -------------------------------------------------------------------------------------
