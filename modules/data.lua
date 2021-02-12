@@ -22,6 +22,15 @@ function data.Save(name, value)
     end
 end
 
+function data.Delete(name)
+    name = prefix .. "|" .. name
+    local data_layer = data.FindLayerThatStartsWith(name .. ":")
+
+    if data_layer then
+        actions.RemoveLayer(data_layer)
+    end
+end
+
 function data.Load(name)
     name = prefix .. "|" .. name
     local data_layer = data.FindLayerThatStartsWith(name .. ":")
