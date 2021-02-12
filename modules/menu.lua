@@ -36,6 +36,7 @@ function menu.pattern(pattern)
     local menuID = pattern.name
     if imgui.BeginTabItem(pattern.name) then
         imgui.Text("Starts at "..pattern.startOffset..", ends at "..pattern.endOffset)
+        imgui.spacing()
 
         local vars = {
             startOffset = tonumber(pattern.startOffset),
@@ -47,9 +48,14 @@ function menu.pattern(pattern)
 
         local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
 
-        if imgui.Button("Go to", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        if imgui.Button("Go to "..pattern.name, {widths[1] * 2, style.DEFAULT_WIDGET_HEIGHT}) then
             actions.GoToObjects(pattern.startOffset)
         end
+        imgui.spacing()
+        imgui.Separator()
+
+        imgui.Text("Edit")
+        imgui.spacing()
         
         gui.InputOffset(vars, "Start", "startOffset", "Copied start offset", "Sets the start of the pattern at the current position")
         gui.InputOffset(vars, "End", "endOffset", "Copied end offset", "Sets the end of the pattern at the current position")
@@ -60,15 +66,12 @@ function menu.pattern(pattern)
             patternutils.savePattern(pattern)
             statusMessage = "Edited "..vars.patternName
         end
-
-        if imgui.Button("Delete", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            statusMessage = "Deleted "..vars.patternName
-            data.Delete(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
-        end
+        imgui.spacing()
 
         imgui.Separator()
 
         imgui.Text("Occurences")
+        imgui.spacing()
         
         gui.InputOffset(vars, "New", "newOffset", "Copied new offset", "Adds a new occurence for this pattern")
 
@@ -77,6 +80,7 @@ function menu.pattern(pattern)
             patternutils.savePattern(pattern)
             statusMessage = "Added ".. vars.newOffset .." to "..vars.patternName
         end
+        imgui.spacing()
 
         local c = 0
         for _,v in pairs(pattern.occurences) do
@@ -99,6 +103,17 @@ function menu.pattern(pattern)
                     patternutils.savePattern(pattern)
                 end
             end
+        end
+        imgui.spacing()
+
+        imgui.Separator()
+
+        imgui.spacing()
+        imgui.spacing()
+
+        if imgui.Button("Delete this pattern", {widths[1] * 2, style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "Deleted "..vars.patternName
+            data.Delete(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
         end
 
         util.saveStateVariables(menuID, vars)
