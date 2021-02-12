@@ -52,6 +52,14 @@ function menu.pattern(pattern)
             actions.GoToObjects(pattern.startOffset)
         end
         imgui.spacing()
+
+        if imgui.Button("Refresh "..pattern.name, {widths[1] * 2, style.DEFAULT_WIDGET_HEIGHT}) then
+            state.SetValue("statusMessage", "Working...")
+            patternutils.refresh(pattern)
+            statusMessage = "Refreshed "..vars.patternName
+        end
+        imgui.spacing()
+
         imgui.Separator()
 
         imgui.Text("Edit")
