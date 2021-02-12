@@ -69,7 +69,7 @@ function data.Load(name)
     local data_layer = data.FindLayerThatStartsWith(name .. ":")
 
     if data_layer then
-        return data_layer.Name:sub(#name + 3, #data_layer.Name)
+        return data_layer.Name:sub(#name + 2, #data_layer.Name)
     end
 end
 
@@ -461,15 +461,20 @@ end
 function menu.pattern(pattern)
     local menuID = pattern.name
     if imgui.BeginTabItem(pattern.name) then
+        imgui.Text("Starts at "..pattern.startOffset..", ends at "..pattern.endOffset)
 
         local vars = {
-            startOffset = 0,
-            endOffset = 0,
-            patternName = "MyPattern"
+            startOffset = tonumber(pattern.startOffset),
+            endOffset = tonumber(pattern.endOffset),
+            patternName = pattern.name
         }
         util.retrieveStateVariables(menuID, vars)
 
         local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
+
+        if imgui.Button("Go to", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            actions.GoToObjects(pattern.startOffset)
+        end
         
         gui.InputOffset(vars, "Start", "startOffset", "Copied start offset", "Sets the start of the pattern at the current position")
         gui.InputOffset(vars, "End", "endOffset", "Copied end offset", "Sets the end of the pattern at the current position")
@@ -480,7 +485,7 @@ function menu.pattern(pattern)
         end
 
         if imgui.Button("Delete", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            statusMessage = "Delete "..vars.patternName
+            statusMessage = "Deleted "..vars.patternName
             data.Delete(vars.patternName, vars.startOffset .. ";" .. vars.endOffset)
         end
 

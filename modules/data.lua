@@ -36,7 +36,7 @@ function data.Load(name)
     local data_layer = data.FindLayerThatStartsWith(name .. ":")
 
     if data_layer then
-        return data_layer.Name:sub(#name + 3, #data_layer.Name)
+        return data_layer.Name:sub(#name + 2, #data_layer.Name)
     end
 end
 
