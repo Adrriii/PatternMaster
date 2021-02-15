@@ -32,6 +32,8 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 
 ## Credits
 
-The code is largely inspired from these two plugins, thank you to their authors :
+The interface and "framework" for this plugin is entirely thanks to IceDynamix, from his IceSV plugin :
 - https://github.com/IceDynamix/iceSV
+
+The idea and the bits of code to save data in layers are inspired from this plugin as well :
 - https://github.com/Illuminati-CRAZ/Memory-2
