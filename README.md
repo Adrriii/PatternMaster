@@ -29,3 +29,9 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 - You can delete an occurence by clicking the delete button next to it.
 - You can delete a pattern by clicking the bottom-most button : There is no confirmation, click at your own risk.
 - The "Current" buttons will autofill the offset input with your current position in the map. Use them.
+
+## Credits
+
+The code is largely inspired from these two plugins, thank you to their authors :
+- https://github.com/IceDynamix/iceSV
+- https://github.com/Illuminati-CRAZ/Memory-2
