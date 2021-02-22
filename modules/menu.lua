@@ -91,19 +91,37 @@ function menu.pattern(pattern)
         imgui.spacing()
 
         local c = 0
+        local spaces = ""
         for _,v in pairs(pattern.occurences) do
             c = c + 1
             if v != nil and v != '' then
-                if imgui.Button(v, {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-                    actions.GoToObjects(v)
+                if imgui.Button("Go to ".. v.time, {widths[1]*1.5, style.DEFAULT_WIDGET_HEIGHT}) then
+                    actions.GoToObjects(v.time)
                 end
                 gui.sameLine()
-                if imgui.Button("Delete            "..v.."|"..c, {widths[1] * 0.75, style.DEFAULT_WIDGET_HEIGHT}) then
+                if imgui.Button("Delete            ".. v.time .."|"..c, {widths[1] * 0.75, style.DEFAULT_WIDGET_HEIGHT}) then
                     local new_occ = {}
                     for _,test in pairs(pattern.occurences) do
-                        if test != nil and test != '' then
-                            if(v != test) then 
-                                table.insert(new_occ, test)
+                        if test.time != nil and test.time != '' then
+                            if(v.time != test.time) then 
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
+                            end
+                        end
+                    end
+                    pattern.occurences = new_occ
+                    patternutils.savePattern(pattern)
+                end
+                gui.sameLine()
+                _, mirror_after = imgui.Checkbox("Mirror?".. spaces, v.mirror)
+                
+                if v.mirror != mirror_after then
+                    local new_occ = {}
+                    for _,test in pairs(pattern.occurences) do
+                        if test.time != nil and test.time != '' then
+                            if test.time == v.time then
+                                table.insert(new_occ, {time=test.time, mirror=mirror_after})
+                            else
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
                             end
                         end
                     end
@@ -111,6 +129,7 @@ function menu.pattern(pattern)
                     patternutils.savePattern(pattern)
                 end
             end
+            spaces = spaces .. " "
         end
         imgui.spacing()
 
