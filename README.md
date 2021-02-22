@@ -22,6 +22,7 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 - This plugins uses layers to store your patterns. 
     - It means you can exit the editor without losing them as long as you save your map. 
     - It also means that you might notice strange layers in your maps, and also that anyone modding the map will be able to see the patterns if they have this plugin as well.
+- This plugin does not handle SVs, layers, and is not meant to handle hitsounds (though it may copy them correctly as a side-effect). These features are not planned.
 
 ## Tips
 
@@ -29,6 +30,11 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 - You can delete an occurence by clicking the delete button next to it.
 - You can delete a pattern by clicking the bottom-most button : There is no confirmation, click at your own risk.
 - The "Current" buttons will autofill the offset input with your current position in the map. Use them.
+
+# Planned features
+
+- Edit the name of a pattern
+- Undo/Redo the refresh process in a single operation
 
 ## Credits
 
