@@ -510,7 +510,7 @@ function menu.pattern(pattern)
         gui.InputOffset(vars, "New", "newOffset", "Copied new offset", "Adds a new occurence for this pattern")
 
         if imgui.Button("Add", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            table.insert(pattern.occurences, vars.newOffset)
+            table.insert(pattern.occurences, {time=vars.newOffset, mirror=false})
             patternutils.savePattern(pattern)
             statusMessage = "Added ".. vars.newOffset .." to "..vars.patternName
         end
@@ -1029,7 +1029,7 @@ end
 function window.main()
     local menuID = "global"
 
-    statusMessage = state.GetValue("statusMessage") or "b2021.2.22"
+    statusMessage = state.GetValue("statusMessage") or "b2021.2.24"
 
     imgui.Begin("Pattern Master", true, imgui_window_flags.AlwaysAutoResize)
     local patterns = patternutils.loadPatterns()
