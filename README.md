@@ -19,10 +19,11 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 ## Important notes
 
 - This plugin destroys parts of the map according to your input (When using Refresh). Be careful.
-- This plugins uses layers to store your patterns. 
-    - It means you can exit the editor without losing them as long as you save your map. 
+- When an occurence is set to SV mode, it will only affect SVs. It works the same way as notes, so Be careful.
+- This plugins uses layers to store your patterns.
+    - It means you can exit the editor without losing them as long as you save your map.
     - It also means that you might notice strange layers in your maps, and also that anyone modding the map will be able to see the patterns if they have this plugin as well.
-- This plugin does not handle SVs, layers, and is not meant to handle hitsounds (though it may copy them correctly as a side-effect). These features are not planned.
+- This plugin does not handle layers, and is not meant to handle hitsounds (though it may copy them correctly as a side-effect). These features are not planned.
 
 ## Tips
 
@@ -30,11 +31,7 @@ The path will look like : `Quaver\Plugins\PatternMaster\plugin.lua`
 - You can delete an occurence by clicking the delete button next to it.
 - You can delete a pattern by clicking the bottom-most button : There is no confirmation, click at your own risk.
 - The "Current" buttons will autofill the offset input with your current position in the map. Use them.
-
-# Planned features
-
-- Edit the name of a pattern
-- Undo/Redo the refresh process in a single operation
+- Even better, the "Add Current" will create an occurence at the current position. Toggle "As SV" to set the occurences to SV mode (practical when working with an SV only pattern)
 
 ## Credits
 

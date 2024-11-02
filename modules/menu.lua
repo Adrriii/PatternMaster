@@ -42,7 +42,8 @@ function menu.pattern(pattern)
             startOffset = tonumber(pattern.startOffset),
             endOffset = tonumber(pattern.endOffset),
             newOffset = 0,
-            patternName = pattern.name
+            patternName = pattern.name,
+			asSV = false,
         }
         util.retrieveStateVariables(menuID, vars)
 
@@ -84,10 +85,18 @@ function menu.pattern(pattern)
         gui.InputOffset(vars, "New", "newOffset", "Copied new offset", "Adds a new occurence for this pattern")
 
         if imgui.Button("Add", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            table.insert(pattern.occurences, {time=vars.newOffset, mirror=false})
+            table.insert(pattern.occurences, {time=vars.newOffset, mirror=false, sv=false})
             patternutils.savePattern(pattern)
             statusMessage = "Added ".. vars.newOffset .." to "..vars.patternName
         end
+		gui.sameLine()
+        if imgui.Button("Add Current", {widths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+            table.insert(pattern.occurences, {time=math.floor(state.SongTime), mirror=false, sv=vars.asSV})
+            patternutils.savePattern(pattern)
+            statusMessage = "Added ".. math.floor(state.SongTime) .." to "..vars.patternName
+        end
+		gui.sameLine()
+		_, vars.asSV = imgui.Checkbox("As SV ?", vars.asSV)
         imgui.spacing()
 
         local c = 0
@@ -103,8 +112,8 @@ function menu.pattern(pattern)
                     local new_occ = {}
                     for _,test in pairs(pattern.occurences) do
                         if test.time != nil and test.time != '' then
-                            if(v.time != test.time) then 
-                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
+                            if(v.time != test.time) then
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
                             end
                         end
                     end
@@ -112,16 +121,34 @@ function menu.pattern(pattern)
                     patternutils.savePattern(pattern)
                 end
                 gui.sameLine()
-                _, mirror_after = imgui.Checkbox("Mirror?".. spaces, v.mirror)
-                
+                _, mirror_after = imgui.Checkbox("Mirror? ", v.mirror)
+
                 if v.mirror != mirror_after then
                     local new_occ = {}
                     for _,test in pairs(pattern.occurences) do
                         if test.time != nil and test.time != '' then
                             if test.time == v.time then
-                                table.insert(new_occ, {time=test.time, mirror=mirror_after})
+                                table.insert(new_occ, {time=test.time, mirror=mirror_after, sv=test.sv})
                             else
-                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
+                            end
+                        end
+                    end
+                    pattern.occurences = new_occ
+                    patternutils.savePattern(pattern)
+                end
+
+                gui.sameLine()
+                _, sv_after = imgui.Checkbox("SV? ", v.sv)
+
+                if v.sv != sv_after then
+                    local new_occ = {}
+                    for _,test in pairs(pattern.occurences) do
+                        if test.time != nil and test.time != '' then
+                            if test.time == v.time then
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=sv_after})
+                            else
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
                             end
                         end
                     end

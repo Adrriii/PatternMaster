@@ -12,6 +12,7 @@ function patternutils.loadPattern(name)
     local pattern = {
         occurences = {},
         objects = {},
+		svs = {},
     }
     local values = util.strsplit(data.Load(name), ";")
 
@@ -25,12 +26,16 @@ function patternutils.loadPattern(name)
             local occurence = {
                 time = o,
                 mirror = false,
+                sv = false,
             }
             if occurence_data[1] != '' then
                 occurence.time = occurence_data[1]
             end
             if occurence_data[2] then
                 occurence.mirror = tonumber(occurence_data[2]) == 1
+            end
+            if occurence_data[3] then
+                occurence.sv = tonumber(occurence_data[3]) == 1
             end
 
             if(occurence.time != '') then
@@ -47,7 +52,7 @@ function patternutils.savePattern(pattern)
     
     for _,v in pairs(pattern.occurences) do
         if v.time != nil and v.time != '' then
-            str = str .. v.time .. "#" .. (v.mirror and 1 or 0) .."/"
+            str = str .. v.time .. "#" .. (v.mirror and 1 or 0) .. "#" .. (v.sv and 1 or 0) .."/"
         end
     end
 
@@ -56,42 +61,66 @@ end
 
 function patternutils.refresh(pattern)
     pattern.objects = {}
+	pattern.svs = {}
 
     for _,note in pairs(map.HitObjects) do
         if note.StartTime >= tonumber(pattern.startOffset) and note.StartTime <= tonumber(pattern.endOffset) + 1 then
             table.insert(pattern.objects, note)
         end
     end
-    
+
+	for _,sv in pairs(map.ScrollVelocities) do
+		if sv.StartTime >= tonumber(pattern.startOffset - 1) and sv.StartTime <= tonumber(pattern.endOffset) then
+			table.insert(pattern.svs, sv)
+		end
+	end
+
     for _,o in pairs(pattern.occurences) do
         if o.time != nil and o.time != '' then
-            patternutils.copyPattern(pattern, o.time, o.mirror)
+            patternutils.copyPattern(pattern, o.time, o.mirror, o.sv)
         end
     end
 end
 
-function patternutils.copyPattern(pattern, offset, mirror)
+function patternutils.copyPattern(pattern, offset, mirror, sv)
     local diff = (offset - tonumber(pattern.startOffset))
 
-    local oldhits = {}
-    for _,note in pairs(map.HitObjects) do
-        if note.StartTime >= tonumber(pattern.startOffset) + diff and note.StartTime <= tonumber(pattern.endOffset) + diff + 1 then
-            table.insert(oldhits, note)
-        end
-    end
+	if sv then
+		local oldsvs = {}
+		for _,sv in pairs(map.ScrollVelocities) do
+			if sv.StartTime >= tonumber(pattern.startOffset - 1) + diff and sv.StartTime <= tonumber(pattern.endOffset - 1) + diff then
+				table.insert(oldsvs, sv)
+			end
+		end
 
-    local newhits = {}
-    for _,note in pairs(pattern.objects) do
-        local endtime = note.EndTime
-        local lane = note.Lane
-        local keys = tostring(map.Mode):gsub("Keys","")
-        if endtime ~= 0 then endtime = note.EndTime + diff end
-        if mirror then
-            lane = -lane + (keys + 1) -- exchange lanes according to keys if mirror
-        end
-        table.insert(newhits, utils.CreateHitObject(note.StartTime + diff, lane, endtime, note.HitSound))
-    end
+		local newsvs = {}
+		for _,sv in pairs(pattern.svs) do
+			table.insert(newsvs, utils.CreateScrollVelocity(sv.StartTime + diff, sv.Multiplier))
+		end
 
-    actions.RemoveHitObjectBatch(oldhits)
-    actions.PlaceHitObjectBatch(newhits)
+		actions.RemoveScrollVelocityBatch(oldsvs)
+		actions.PlaceScrollVelocityBatch(newsvs)
+	else
+		local oldhits = {}
+		for _,note in pairs(map.HitObjects) do
+			if note.StartTime >= tonumber(pattern.startOffset) + diff and note.StartTime <= tonumber(pattern.endOffset) + diff + 1 then
+				table.insert(oldhits, note)
+			end
+		end
+
+		local newhits = {}
+		for _,note in pairs(pattern.objects) do
+			local endtime = note.EndTime
+			local lane = note.Lane
+			local keys = tostring(map.Mode):gsub("Keys","")
+			if endtime ~= 0 then endtime = note.EndTime + diff end
+			if mirror then
+				lane = -lane + (keys + 1) -- exchange lanes according to keys if mirror
+			end
+			table.insert(newhits, utils.CreateHitObject(note.StartTime + diff, lane, endtime, note.HitSound))
+		end
+
+		actions.RemoveHitObjectBatch(oldhits)
+		actions.PlaceHitObjectBatch(newhits)
+	end
 end

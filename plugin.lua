@@ -20,11 +20,9 @@
 data = {}
 editor = {}
 gui = {}
-mathematics = {}
 menu = {}
 patternutils = {}
 style = {}
-sv = {}
 util = {}
 window = {}
 -------------------------------------------------------------------------------------
@@ -335,92 +333,6 @@ function gui.InputOffset(vars, label, var, status, tooltip)
 end
 
 -------------------------------------------------------------------------------------
--- modules\mathematics.lua
--------------------------------------------------------------------------------------
-
--- Simple recursive implementation of the binomial coefficient
-function mathematics.binom(n, k)
-    if k == 0 or k == n then return 1 end
-    return mathematics.binom(n-1, k-1) + mathematics.binom(n-1, k)
-end
-
--- Currently unused
-function mathematics.bernsteinPolynomial(i,n,t) return mathematics.binom(n,i) * t^i * (1-t)^(n-i) end
-
--- Derivative for *any* bezier curve with at point t
--- Currently unused
-function mathematics.bezierDerivative(P, t)
-    local n = #P
-    local sum = 0
-    for i = 0, n-2, 1 do sum = sum + mathematics.bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
-    return sum
-end
-
-function mathematics.cubicBezier(P, t)
-    return P[1] + 3*t*(P[2]-P[1]) + 3*t^2*(P[1]+P[3]-2*P[2]) + t^3*(P[4]-P[1]+3*P[2]-3*P[3])
-end
-
-function mathematics.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
-
-function mathematics.clamp(x, min, max)
-    if x < min then x = min end
-    if x > max then x = max end
-    return x
-end
-
-function mathematics.min(t)
-    local min = t[1]
-    for _, value in pairs(t) do
-        if value < min then min = value end
-    end
-
-    return min
-end
-
-function mathematics.max(t)
-    local max = t[1]
-    for _, value in pairs(t) do
-        if value > max then max = value end
-    end
-
-    return max
-end
-
-mathematics.comparisonOperators = {
-    "=", "!=", "<", "<=", ">=", ">"
-}
-
--- No minus/division/root since they are present in the given operators already
--- Add negative values to subtract, multiply with 1/x to divide by x etc.
-mathematics.arithmeticOperators = {
-    "=", "+", "×", "^"
-}
-
-function mathematics.evaluateComparison(operator, value1, value2)
-    local compareFunctions = {
-        ["="]  = function (v1, v2) return v1 == v2 end,
-        ["!="] = function (v1, v2) return v1 ~= v2 end,
-        ["<"]  = function (v1, v2) return v1 < v2 end,
-        ["<="] = function (v1, v2) return v1 <= v2 end,
-        [">="] = function (v1, v2) return v1 >= v2 end,
-        [">"]  = function (v1, v2) return v1 > v2 end
-    }
-
-    return compareFunctions[operator](value1, value2)
-end
-
-function mathematics.evaluateArithmetics(operator, oldValue, changeValue)
-    local arithmeticFunctions = {
-        ["="] = function (v1, v2) return v2 end,
-        ["+"] = function (v1, v2) return v1 + v2 end,
-        ["×"] = function (v1, v2) return v1 * v2 end,
-        ["^"] = function (v1, v2) return v1 ^ v2 end
-    }
-
-    return arithmeticFunctions[operator](oldValue, changeValue)
-end
-
--------------------------------------------------------------------------------------
 -- modules\menu.lua
 -------------------------------------------------------------------------------------
 
@@ -468,7 +380,8 @@ function menu.pattern(pattern)
             startOffset = tonumber(pattern.startOffset),
             endOffset = tonumber(pattern.endOffset),
             newOffset = 0,
-            patternName = pattern.name
+            patternName = pattern.name,
+			asSV = false,
         }
         util.retrieveStateVariables(menuID, vars)
 
@@ -510,10 +423,18 @@ function menu.pattern(pattern)
         gui.InputOffset(vars, "New", "newOffset", "Copied new offset", "Adds a new occurence for this pattern")
 
         if imgui.Button("Add", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            table.insert(pattern.occurences, {time=vars.newOffset, mirror=false})
+            table.insert(pattern.occurences, {time=vars.newOffset, mirror=false, sv=false})
             patternutils.savePattern(pattern)
             statusMessage = "Added ".. vars.newOffset .." to "..vars.patternName
         end
+		gui.sameLine()
+        if imgui.Button("Add Current", {widths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+            table.insert(pattern.occurences, {time=math.floor(state.SongTime), mirror=false, sv=vars.asSV})
+            patternutils.savePattern(pattern)
+            statusMessage = "Added ".. math.floor(state.SongTime) .." to "..vars.patternName
+        end
+		gui.sameLine()
+		_, vars.asSV = imgui.Checkbox("As SV ?", vars.asSV)
         imgui.spacing()
 
         local c = 0
@@ -529,8 +450,8 @@ function menu.pattern(pattern)
                     local new_occ = {}
                     for _,test in pairs(pattern.occurences) do
                         if test.time != nil and test.time != '' then
-                            if(v.time != test.time) then 
-                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
+                            if(v.time != test.time) then
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
                             end
                         end
                     end
@@ -538,16 +459,34 @@ function menu.pattern(pattern)
                     patternutils.savePattern(pattern)
                 end
                 gui.sameLine()
-                _, mirror_after = imgui.Checkbox("Mirror?".. spaces, v.mirror)
-                
+                _, mirror_after = imgui.Checkbox("Mirror? ", v.mirror)
+
                 if v.mirror != mirror_after then
                     local new_occ = {}
                     for _,test in pairs(pattern.occurences) do
                         if test.time != nil and test.time != '' then
                             if test.time == v.time then
-                                table.insert(new_occ, {time=test.time, mirror=mirror_after})
+                                table.insert(new_occ, {time=test.time, mirror=mirror_after, sv=test.sv})
                             else
-                                table.insert(new_occ, {time=test.time, mirror=test.mirror})
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
+                            end
+                        end
+                    end
+                    pattern.occurences = new_occ
+                    patternutils.savePattern(pattern)
+                end
+
+                gui.sameLine()
+                _, sv_after = imgui.Checkbox("SV? ", v.sv)
+
+                if v.sv != sv_after then
+                    local new_occ = {}
+                    for _,test in pairs(pattern.occurences) do
+                        if test.time != nil and test.time != '' then
+                            if test.time == v.time then
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=sv_after})
+                            else
+                                table.insert(new_occ, {time=test.time, mirror=test.mirror, sv=test.sv})
                             end
                         end
                     end
@@ -592,6 +531,7 @@ function patternutils.loadPattern(name)
     local pattern = {
         occurences = {},
         objects = {},
+		svs = {},
     }
     local values = util.strsplit(data.Load(name), ";")
 
@@ -605,12 +545,16 @@ function patternutils.loadPattern(name)
             local occurence = {
                 time = o,
                 mirror = false,
+                sv = false,
             }
             if occurence_data[1] != '' then
                 occurence.time = occurence_data[1]
             end
             if occurence_data[2] then
                 occurence.mirror = tonumber(occurence_data[2]) == 1
+            end
+            if occurence_data[3] then
+                occurence.sv = tonumber(occurence_data[3]) == 1
             end
 
             if(occurence.time != '') then
@@ -627,7 +571,7 @@ function patternutils.savePattern(pattern)
     
     for _,v in pairs(pattern.occurences) do
         if v.time != nil and v.time != '' then
-            str = str .. v.time .. "#" .. (v.mirror and 1 or 0) .."/"
+            str = str .. v.time .. "#" .. (v.mirror and 1 or 0) .. "#" .. (v.sv and 1 or 0) .."/"
         end
     end
 
@@ -636,44 +580,68 @@ end
 
 function patternutils.refresh(pattern)
     pattern.objects = {}
+	pattern.svs = {}
 
     for _,note in pairs(map.HitObjects) do
         if note.StartTime >= tonumber(pattern.startOffset) and note.StartTime <= tonumber(pattern.endOffset) + 1 then
             table.insert(pattern.objects, note)
         end
     end
-    
+
+	for _,sv in pairs(map.ScrollVelocities) do
+		if sv.StartTime >= tonumber(pattern.startOffset - 1) and sv.StartTime <= tonumber(pattern.endOffset) then
+			table.insert(pattern.svs, sv)
+		end
+	end
+
     for _,o in pairs(pattern.occurences) do
         if o.time != nil and o.time != '' then
-            patternutils.copyPattern(pattern, o.time, o.mirror)
+            patternutils.copyPattern(pattern, o.time, o.mirror, o.sv)
         end
     end
 end
 
-function patternutils.copyPattern(pattern, offset, mirror)
+function patternutils.copyPattern(pattern, offset, mirror, sv)
     local diff = (offset - tonumber(pattern.startOffset))
 
-    local oldhits = {}
-    for _,note in pairs(map.HitObjects) do
-        if note.StartTime >= tonumber(pattern.startOffset) + diff and note.StartTime <= tonumber(pattern.endOffset) + diff + 1 then
-            table.insert(oldhits, note)
-        end
-    end
+	if sv then
+		local oldsvs = {}
+		for _,sv in pairs(map.ScrollVelocities) do
+			if sv.StartTime >= tonumber(pattern.startOffset - 1) + diff and sv.StartTime <= tonumber(pattern.endOffset - 1) + diff then
+				table.insert(oldsvs, sv)
+			end
+		end
 
-    local newhits = {}
-    for _,note in pairs(pattern.objects) do
-        local endtime = note.EndTime
-        local lane = note.Lane
-        local keys = tostring(map.Mode):gsub("Keys","")
-        if endtime ~= 0 then endtime = note.EndTime + diff end
-        if mirror then
-            lane = -lane + (keys + 1) -- exchange lanes according to keys if mirror
-        end
-        table.insert(newhits, utils.CreateHitObject(note.StartTime + diff, lane, endtime, note.HitSound))
-    end
+		local newsvs = {}
+		for _,sv in pairs(pattern.svs) do
+			table.insert(newsvs, utils.CreateScrollVelocity(sv.StartTime + diff, sv.Multiplier))
+		end
 
-    actions.RemoveHitObjectBatch(oldhits)
-    actions.PlaceHitObjectBatch(newhits)
+		actions.RemoveScrollVelocityBatch(oldsvs)
+		actions.PlaceScrollVelocityBatch(newsvs)
+	else
+		local oldhits = {}
+		for _,note in pairs(map.HitObjects) do
+			if note.StartTime >= tonumber(pattern.startOffset) + diff and note.StartTime <= tonumber(pattern.endOffset) + diff + 1 then
+				table.insert(oldhits, note)
+			end
+		end
+
+		local newhits = {}
+		for _,note in pairs(pattern.objects) do
+			local endtime = note.EndTime
+			local lane = note.Lane
+			local keys = tostring(map.Mode):gsub("Keys","")
+			if endtime ~= 0 then endtime = note.EndTime + diff end
+			if mirror then
+				lane = -lane + (keys + 1) -- exchange lanes according to keys if mirror
+			end
+			table.insert(newhits, utils.CreateHitObject(note.StartTime + diff, lane, endtime, note.HitSound))
+		end
+
+		actions.RemoveHitObjectBatch(oldhits)
+		actions.PlaceHitObjectBatch(newhits)
+	end
 end
 
 -------------------------------------------------------------------------------------
@@ -730,150 +698,6 @@ end
 
 function style.rgb1ToUint(r, g, b, a)
     return a * 16 ^ 6 + b * 16 ^ 4 + g * 16 ^ 2 + r
-end
-
--------------------------------------------------------------------------------------
--- modules\sv.lua
--------------------------------------------------------------------------------------
-
--- Returns a list of SV objects as defined in Quaver.API/Maps/Structures/SliderVelocityInfo.cs
-function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, skipEndSV)
-
-    local timeInterval = (endOffset - startOffset)/intermediatePoints
-    local velocityInterval = (endSV - startSV)/intermediatePoints
-
-    if skipEndSV then intermediatePoints = intermediatePoints - 1 end
-
-    local SVs = {}
-
-    for step = 0, intermediatePoints, 1 do
-        local offset = step * timeInterval + startOffset
-        local velocity = step * velocityInterval + startSV
-        SVs[step+1] = utils.CreateScrollVelocity(offset, velocity)
-    end
-
-    return SVs
-end
-
-function sv.stutter(offsets, startSV, duration, averageSV, skipEndSV, skipFinalEndSV, effectDurationMode, effectDurationValue)
-    local SVs = {}
-
-    for i, offset in ipairs(offsets) do
-        if i == #offsets then break end
-
-        table.insert(SVs, utils.CreateScrollVelocity(offset, startSV))
-
-        local length
-        if effectDurationMode == 0 then -- scale with distance between notes
-            length = (offsets[i+1] - offset) * effectDurationValue
-        elseif effectDurationMode == 1 then -- scale with snap
-            length = effectDurationValue * 60000/map.GetTimingPointAt(offset).Bpm
-        elseif effectDurationMode == 2 then -- absolute length
-            length = effectDurationValue
-        end
-
-        table.insert(SVs, utils.CreateScrollVelocity(length*duration + offset, (duration*startSV-averageSV)/(duration-1)))
-
-        local lastOffsetEnd = offset+length
-        if skipEndSV == false and (offsets[i+1] ~= lastOffsetEnd) then
-            table.insert(SVs, utils.CreateScrollVelocity(lastOffsetEnd, averageSV))
-        end
-    end
-
-    if skipFinalEndSV == false then
-        table.insert(SVs, utils.CreateScrollVelocity(offsets[#offsets], averageSV))
-    end
-
-    return SVs
-end
-
---[[
-    about beziers
-
-    i originally planned to support any number of control points from 3 (quadratic)
-    to, idk, 10 or something
-
-    i ran into some issues when trying to write general code for all orders of n,
-    which made me give up on them for now
-
-    the way to *properly* do it
-        - find length t at position x
-        - use the derivative of bezier to find y at t
-
-    problem is that i cant reliably perform the first step for any curve
-    so i guess i'll be using a very bad approach to this for now... if you know more about
-    this stuff please get in contact with me
-]]
-
--- @return table of scroll velocities
-function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageSV, intermediatePoints, skipEndSV)
-
-    local stepInterval = 1/intermediatePoints
-    local timeInterval = (endOffset - startOffset) * stepInterval
-
-    -- the larger this number, the more accurate the final sv is
-    -- ... and the longer it's going to take
-    local totalSampleSize = 2500
-    local allBezierSamples = {}
-    for t=0, 1, 1/totalSampleSize do
-        local x = mathematics.cubicBezier({0, P1_x, P2_x, 1}, t)
-        local y = mathematics.cubicBezier({0, P1_y, P2_y, 1}, t)
-        table.insert(allBezierSamples, {x=x,y=y})
-    end
-
-    local SVs = {}
-    local positions = {}
-
-    local currentPoint = 0
-
-    for sampleCounter = 1, totalSampleSize, 1 do
-        if allBezierSamples[sampleCounter].x > currentPoint then
-            table.insert(positions, allBezierSamples[sampleCounter].y)
-            currentPoint = currentPoint + stepInterval
-        end
-    end
-
-    for i = 2, intermediatePoints, 1 do
-        local offset = (i-2) * timeInterval + startOffset
-        local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
-        SVs[i-1] = utils.CreateScrollVelocity(offset, velocity)
-    end
-
-    table.insert(SVs, utils.CreateScrollVelocity((intermediatePoints - 1) * timeInterval + startOffset, SVs[#SVs].Multiplier))
-
-    if skipEndSV == false then
-        table.insert(SVs, utils.CreateScrollVelocity(endOffset, averageSV))
-    end
-
-    return SVs, util.subdivideTable(allBezierSamples, 1, 50, true)
-end
-
-
---[[
-    Example for cross multiply taken from reamberPy
-
-    baseSVs    | (1.0) ------- (2.0) ------- (3.0) |
-    crossSVs   | (1.0)  (1.5) ------- (2.0) ------ |
-    __________ | _________________________________ |
-    result     | (1.0) ------- (3.0) ------- (6.0) |
-]]
-
-function sv.crossMultiply(baseSVs, crossSVs)
-    local SVs = {}
-    local crossIndex = 1
-
-    for i, baseSV in pairs(baseSVs) do
-        while crossIndex < #crossSVs and baseSV.StartTime > crossSVs[crossIndex+1].StartTime do
-            crossIndex = crossIndex + 1
-        end
-
-        SVs[i] = utils.CreateScrollVelocity(
-            baseSV.StartTime,
-            baseSV.Multiplier * crossSVs[crossIndex].Multiplier
-        )
-    end
-
-    return SVs
 end
 
 -------------------------------------------------------------------------------------
@@ -1029,7 +853,7 @@ end
 function window.main()
     local menuID = "global"
 
-    statusMessage = state.GetValue("statusMessage") or "b2021.2.24"
+    statusMessage = state.GetValue("statusMessage") or "b2024.11.2"
 
     imgui.Begin("Pattern Master", true, imgui_window_flags.AlwaysAutoResize)
     local patterns = patternutils.loadPatterns()
